@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[228]:
+# In[1]:
 
 
 import sklearn.datasets as skd
@@ -10,123 +10,123 @@ from nltk.corpus import stopwords
 import string
 from nltk.stem import WordNetLemmatizer
 import numpy as np
+import re
+from nltk.stem import SnowballStemmer
 
 
-# In[229]:
+# In[2]:
 
 
 categories = ['0', '1']
 ds = skd.load_files("./dataset/", categories=categories, encoding="UTF-8")
 
 
-# In[230]:
+# In[3]:
 
 
 ds.keys()
 
 
-# In[231]:
+# In[4]:
 
 
 ds.target_names
 
 
-# In[232]:
+# In[5]:
 
 
 type(ds.data)
 
 
-# In[233]:
+# In[6]:
 
 
 ds.data[0]
 
 
-# In[ ]:
+# In[7]:
 
 
-
-
-
-# In[234]:
-
-
-def process(content):
-    content = content.lower()
-    content = content.strip('\n')
-    content = content.replace('\n','')
-    content = content.replace('\xa0',' ')
-    content = content.strip('(')
-    content = content.replace('(',"")
-    content = content.strip(')')
-    content = content.replace(')',"")
+def clean_text(text):
     
-    word_list = word_tokenize(content)
+    ## Remove puncuation
+    text = text.translate(string.punctuation)
     
-    sw  = set(stopwords.words('english'))
-    useful_words = [w for w in word_list if w not in sw]
+    ## Convert words to lower case and split them
+    text = text.lower().split()
     
-    table = str.maketrans('', '', string.punctuation)
-    stripped = [w.translate(table) for w in useful_words]
-    stripped = list(filter(None, stripped))
-    #stripped = list(filter("\"",stripped))
+    ## Remove stop words
+    stops = set(stopwords.words("english"))
+    text = [w for w in text if not w in stops and len(w) >= 3]
     
-    l = WordNetLemmatizer()
-    lem_words = []
-    for w in stripped:
-        lem_words.append(l.lemmatize(w))
-    
-    return lem_words
-    
-    
+    text = " ".join(text)
+    ## Clean the text
+    text = re.sub(r"[^A-Za-z0-9^,!.\/'+-=]", " ", text)
+    text = re.sub(r"what's", "what is ", text)
+    text = re.sub(r"\'s", " ", text)
+    text = re.sub(r"\'ve", " have ", text)
+    text = re.sub(r"n't", " not ", text)
+    text = re.sub(r"i'm", "i am ", text)
+    text = re.sub(r"\'re", " are ", text)
+    text = re.sub(r"\'d", " would ", text)
+    text = re.sub(r"\'ll", " will ", text)
+    text = re.sub(r",", " ", text)
+    text = re.sub(r"\.", " ", text)
+    text = re.sub(r"!", " ! ", text)
+    text = re.sub(r"\/", " ", text)
+    text = re.sub(r"\^", " ^ ", text)
+    text = re.sub(r"\+", "  ", text)
+    text = re.sub(r"\-", "  ", text)
+    text = re.sub(r"\=", " = ", text)
+    text = re.sub(r"'", " ", text)
+    text = re.sub(r"(\d+)(k)", r"\g<1>000", text)
+    text = re.sub(r":", " : ", text)
+    text = re.sub(r"e - mail", "email", text)
+    text = re.sub(r"j k", "jk", text)
+    text = re.sub(r"\s{2,}", " ", text)
+    ## Stemming
+    text = text.split()
+    stemmer = SnowballStemmer('english')
+    stemmed_words = [stemmer.stem(word) for word in text]
+    text = " ".join(stemmed_words)
+    return text 
 
 
-# In[235]:
+# In[10]:
 
 
 length = len(ds.data)
 
 
-# In[236]:
+# In[11]:
 
 
-text_list = []
-for ix in range(length):
-    lem_words = process(ds.data[ix])
-    text_list.append(lem_words)
-    
-
-
-# In[237]:
-
-
-text_str = ""
 final_data = []
 for ix in range(length):
-    text_str = "".join(text_list[ix])
+    text_str = clean_text(ds.data[ix])
     final_data.append(text_str)
 
 
-# In[238]:
+# In[12]:
 
 
 len(final_data)
 
 
-# In[239]:
+# In[13]:
 
 
 from sklearn.model_selection import train_test_split
 
 
-# In[240]:
+# In[14]:
 
 
-X_train, X_test, Y_train, Y_test = train_test_split(final_data, data.target, test_size=0.33)
+X_train, X_test, Y_train, Y_test = train_test_split(final_data, ds.target, test_size=0.33)
 
 
-# In[241]:
+# In[15]:
 
 
 X_train = np.array(X_train)
@@ -135,144 +135,144 @@ X_test = np.array(X_test)
 Y_test = np.array(Y_test)
 
 
-# In[242]:
+# In[16]:
 
 
 print(X_train.shape, Y_train.shape)
 print(X_test.shape, Y_test.shape)
 
 
-# In[243]:
+# In[17]:
 
 
 from sklearn.feature_extraction.text import CountVectorizer
 count_vect = CountVectorizer()
 
 
-# In[244]:
+# In[18]:
 
 
 X_train_tf = count_vect.fit_transform(X_train)
 
 
-# In[245]:
+# In[19]:
 
 
 X_train_tf.shape
 
 
-# In[246]:
+# In[46]:
 
 
 from sklearn.feature_extraction.text import TfidfTransformer
 tfidf_transformer = TfidfTransformer()
 
 
-# In[247]:
+# In[47]:
 
 
 X_train_tfidf = tfidf_transformer.fit_transform(X_train_tf)
 
 
-# In[248]:
+# In[22]:
 
 
 X_train_tfidf.shape
 
 
-# In[249]:
+# In[23]:
 
 
 from sklearn.naive_bayes import MultinomialNB
 
 
-# In[251]:
+# In[24]:
 
 
 clf = MultinomialNB().fit(X_train_tfidf, Y_train)
 
 
-# In[252]:
+# In[25]:
 
 
 X_test_tf = count_vect.transform(X_test)
 X_test_tfidf = tfidf_transformer.transform(X_test_tf)
 
 
-# In[253]:
+# In[26]:
 
 
 prediction = clf.predict(X_test_tfidf)
 
 
-# In[255]:
+# In[27]:
 
 
 from sklearn.metrics import accuracy_score, classification_report
 print(accuracy_score(Y_test, prediction))
 
 
-# In[256]:
+# In[28]:
 
 
 print(classification_report(Y_test, prediction, target_names=ds.target_names))
 
 
-# In[257]:
+# In[29]:
 
 
 from sklearn.ensemble import RandomForestClassifier
 
 
-# In[258]:
+# In[30]:
 
 
 rf = RandomForestClassifier().fit(X_train_tfidf, Y_train)
 
 
-# In[259]:
+# In[31]:
 
 
 pred_rf = rf.predict(X_test_tfidf)
 
 
-# In[261]:
+# In[32]:
 
 
 print( accuracy_score(Y_test, pred_rf))
 
 
-# In[270]:
+# In[33]:
 
 
 print(classification_report(Y_test, pred_rf, target_names=ds.target_names))
 
 
-# In[262]:
+# In[34]:
 
 
 from sklearn.svm import LinearSVC
 
 
-# In[264]:
+# In[35]:
 
 
 svc = LinearSVC().fit(X_train_tfidf, Y_train)
 
 
-# In[265]:
+# In[36]:
 
 
 pred_svc = svc.predict(X_test_tfidf)
 
 
-# In[266]:
+# In[37]:
 
 
 print(accuracy_score(Y_test, pred_svc))
 
 
-# In[271]:
+# In[38]:
 
 
 print(classification_report(Y_test, pred_svc, target_names=ds.target_names))
